@@ -1,16 +1,7 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: sre-app-config
-data:
-  APP_ENV: "staging"
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sre-pleno-app
-  labels:
-    app: sre-pleno-app
 spec:
   replicas: 2
   selector:
@@ -21,36 +12,26 @@ spec:
       labels:
         app: sre-pleno-app
     spec:
+      volumes:
+        - name: applogs
+          emptyDir: {}
       containers:
-        - name: app
+        - name: sre-pleno-app
           image: sre-pleno-app:latest
-          imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8080
-          env:
-            - name: APP_ENV
-              valueFrom:
-                configMapKeyRef:
-                  name: sre-app-config
-                  key: APP_ENV
-            - name: PORT
-              value: "8080"
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "200m"
-              memory: "256Mi"
+            - containerPort: 80
+          volumeMounts:
+            - name: applogs
+              mountPath: /app/logs
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /health
-              port: 8080
+              port: 80
             initialDelaySeconds: 10
-            periodSeconds: 15
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            periodSeconds: 20

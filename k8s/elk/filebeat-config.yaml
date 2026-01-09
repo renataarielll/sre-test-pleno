@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-config
+  namespace: elastic-system
+data:
+  filebeat.yml: |
+    filebeat.inputs:
+      - type: stdin
+
+    processors:
+      - add_fields:
+          target: ''
+          fields:
+            app: sre-pleno-app
+            environment: test
+
+    output.elasticsearch:
+      hosts: ["https://sre-elasticsearch-es-http.elastic-system.svc:9200"]
+      username: elastic
+      password: ${ELASTIC_PASSWORD}
+      ssl.verification_mode: none
