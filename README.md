@@ -1,181 +1,88 @@
-# SRE Test – Aplicação com Kubernetes, HPA e Observabilidade
+🚀 SRE Challenge - Cloud & Observability
+Este repositório contém a solução para o desafio técnico de SRE, focando em containerização, orquestração, monitoramento e análise de logs estruturados.
 
-## 📌 Visão Geral
+🏗️ Arquitetura da Solução
+A aplicação consiste em uma API Flask operando em ambiente Kubernetes, integrada a uma stack completa de observabilidade.
 
-Este projeto demonstra a implementação completa de uma aplicação containerizada com **Docker**, orquestrada em **Kubernetes**, com **autoscaling (HPA)** e **observabilidade usando Prometheus e Grafana**.
+Aplicação: Python Flask com exportador nativo de métricas Prometheus.
 
-O objetivo é simular um ambiente próximo de produção, aplicando boas práticas esperadas de um **SRE Pleno**: confiabilidade, escalabilidade, monitoramento e troubleshooting.
+Orquestração: Kubernetes (Minikube) com separação por Namespaces (sre-app e monitoring).
 
----
+Logs (EFK Stack):
 
-## 🧰 Stack Utilizada
+Filebeat: Coleta logs do volume compartilhado em /app/logs.
 
-* **Python 3.11**
-* **FastAPI**
-* **Uvicorn**
-* **Docker**
-* **Kubernetes (Minikube)**
-* **Helm**
-* **Prometheus**
-* **Grafana**
+Logstash: Processa logs via filtros Grok para estruturar latência e status HTTP.
 
----
+Elasticsearch: Armazenamento e indexação.
 
-## 📂 Estrutura do Projeto
+Kibana: Visualização e análise.
 
-```
-sre-test-pleno/
-├── app/
-│   ├── main.py
-│   ├── requirements.txt
-├── k8s/
-│   ├── deployment.yaml
-│   ├── service.yaml
-│   ├── hpa.yaml
-├── Dockerfile
-└── README.md
-```
+Métricas: Prometheus + Grafana (via Helm).
 
----
+Escalabilidade: HPA (Horizontal Pod Autoscaler) baseado em consumo de CPU.
 
-## 🚀 Como Executar Localmente (Docker)
+CI/CD: GitHub Actions configurado para Lint, Build e Push de imagem.
 
-```bash
-docker build -t sre-pleno-app .
-docker run -p 8080:8080 sre-pleno-app
-```
+🛠️ Decisões Técnicas e Troubleshooting (SRE Insights)
+Durante a implementação, foram aplicadas as seguintes correções críticas:
 
-Acesse:
+Otimização de Imagem Docker: Corrigido erro de ModuleNotFoundError através de um build multi-stage que garante a presença de dependências como flask e prometheus-client.
 
-* [http://localhost:8080/health](http://localhost:8080/health)
+Gestão de Recursos (FinOps/Stability): Identificado e mitigado erro OOMKilled no Elasticsearch. Os limites de memória (Requests/Limits) foram refinados para operar dentro das restrições de um nó único do Minikube (6GB RAM).
 
----
+Métricas Customizadas: A aplicação foi instrumentada para reportar latência (Histogram) e contagem de requisições (Counter), permitindo a criação de dashboards de Golden Signals.
 
-## ☸️ Kubernetes (Minikube)
+🚀 Como Executar
+1. Preparação do Ambiente
+Bash
 
-### 1️⃣ Subir o cluster
-
-```bash
-minikube start --driver=docker --memory=6000 --cpus=4
-```
-
-### 2️⃣ Usar o Docker do Minikube
-
-```bash
+minikube start --memory=6144 --cpus=4
 eval $(minikube docker-env)
-docker build -t sre-pleno-app:latest .
-```
+2. Build da Aplicação
+Bash
 
-### 3️⃣ Aplicar manifests
+docker build -t sre-pleno-app:v3 .
+3. Deploy da Infraestrutura
+Bash
 
-```bash
-kubectl apply -f k8s/
-```
+# Aplicação e Logs
+kubectl apply -f k8s/configmap.yaml -n sre-app
+kubectl apply -f k8s/deployment.yaml -n sre-app
+kubectl apply -f k8s/elk/ -n sre-app
 
-### 4️⃣ Acessar a aplicação
-
-```bash
-kubectl port-forward svc/sre-pleno-app 8080:80
-```
-
----
-
-## ❤️ Healthchecks
-
-* **/health** → Liveness Probe
-* **/ready** → Readiness Probe
-
-Esses endpoints garantem que o Kubernetes só direcione tráfego para pods saudáveis.
-
----
-
-## 📈 Autoscaling (HPA)
-
-### Habilitar Metrics Server
-
-```bash
-minikube addons enable metrics-server
-```
-
-### Aplicar HPA
-
-```bash
-kubectl apply -f k8s/hpa.yaml
-```
-
-### Testar escalabilidade
-
-```bash
-kubectl run load-generator \
-  --image=busybox \
-  --restart=Never \
-  --command -- sh -c "while true; do wget -q -O- http://sre-pleno-app.default.svc.cluster.local; done"
-```
-
-Verifique:
-
-```bash
-kubectl get hpa
-kubectl get pods
-```
-
----
-
-## 📊 Observabilidade (Prometheus + Grafana)
-
-### Instalação via Helm
-
-```bash
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-
+# Monitoramento
 kubectl create namespace monitoring
+helm install prometheus-stack prometheus-community/kube-prometheus-stack -n monitoring
+4. Acessando a Aplicação
+Bash
 
-helm install monitoring prometheus-community/kube-prometheus-stack \
-  --namespace monitoring
-```
+minikube service sre-pleno-app-service -n sre-app --url
+📈 Observabilidade
+Endpoint de Métricas: /metrics
 
-### Acessar Grafana
+Health Check: /health
 
-```bash
-kubectl port-forward -n monitoring svc/monitoring-grafana 3000:80
-```
+Logs Estruturados: Gerados em /app/logs/app.log no formato: 2026-01-10 00:45:12 INFO Root endpoint accessed
 
-Acesse: [http://localhost:3000](http://localhost:3000)
+🤖 CI/CD Pipeline
+O arquivo .github/workflows/main.yml executa automaticamente:
 
-Credenciais:
+Linting: Verificação de boas práticas no código Python.
 
-```bash
-kubectl get secret monitoring-grafana -n monitoring \
-  -o jsonpath="{.data.admin-user}" | base64 --decode
+Build: Geração da imagem Docker.
 
-kubectl get secret monitoring-grafana -n monitoring \
-  -o jsonpath="{.data.admin-password}" | base64 --decode
-```
+Security Check: (Opcional) Scan de vulnerabilidades na imagem.
 
----
+O que você pode fazer agora:
+Copie o conteúdo acima para o seu arquivo README.md.
 
-## 📊 Dashboards Recomendados
+Garanta que todos os arquivos .yaml que usamos estão nas pastas mencionadas.
 
-* Kubernetes / Compute Resources / Pod
-* Kubernetes / Deployment
-* Kubernetes / Horizontal Pod Autoscaler
+Faça o commit final:
 
----
+Bash
 
-## 🧠 Decisões Técnicas
-
-* **ClusterIP** para comunicação interna
-* **Requests e Limits** para previsibilidade de recursos
-* **HPA baseado em CPU** para escalabilidade automática
-* **Prometheus + Grafana** para observabilidade completa
-
----
-
-## ✅ Conclusão
-
-Este projeto demonstra a construção de uma aplicação resiliente, escalável e observável em Kubernetes, seguindo práticas modernas de SRE.
-
----
-
-👩‍💻 Desenvolvido por **Renata Delgado**
+git add .
+git commit -m "docs: final update with architecture and troubleshooting notes"
+git push origin main
