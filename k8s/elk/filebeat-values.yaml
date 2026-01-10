@@ -1,0 +1,10 @@
+filebeat.autodiscover:
+  providers:
+    - type: kubernetes
+      node: ${NODE_NAME}
+      hints.enabled: true
+
+output.elasticsearch:
+  hosts: ["https://sre-elasticsearch-es-http:9200"]
+  username: elastic
+  password: ${ELASTIC_PASSWORD}

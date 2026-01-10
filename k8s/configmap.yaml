@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  labels:
+    app: sre-pleno-app
+data:
+  # Requisito: Definir ambiente como staging [cite: 30]
+  APP_ENV: "staging"
+  # Opcional: Você também pode centralizar a porta aqui
+  PORT: "8080"

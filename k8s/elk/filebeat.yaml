@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: filebeat
-  namespace: elastic-system
+  namespace: sre-app
 spec:
   selector:
     matchLabels:
@@ -12,48 +12,37 @@ spec:
       labels:
         app: filebeat
     spec:
-      terminationGracePeriodSeconds: 30
+      serviceAccountName: default
       containers:
-      - name: filebeat
-        image: docker.elastic.co/beats/filebeat:8.11.1
-        args:
-          - "-c"
-          - "/etc/filebeat.yml"
-          - "-e"
-      - name: filebeat
-        volumeMounts:
-        - name: applogs
-          mountPath: /app/logs  
-        securityContext:
-          runAsUser: 0
-        env:
-        - name: NODE_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: spec.nodeName
-        - name: ELASTIC_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: elastic-credentials
-              key: ELASTIC_PASSWORD
-        volumeMounts:
-        - name: config
-          mountPath: /etc/filebeat.yml
-          subPath: filebeat.yml
-        - name: varlog
-          mountPath: /var/log
-        - name: containers
-          mountPath: /var/lib/docker/containers
-          readOnly: true
+        - name: filebeat
+          image: docker.elastic.co/beats/filebeat:8.11.1
+          args: # Corrigido para formato de lista em bloco
+            - "-c"
+            - "/etc/filebeat.yml"
+            - "-e"
+          securityContext:
+            runAsUser: 0
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: config
+              mountPath: /etc/filebeat.yml
+              subPath: filebeat.yml
+            - name: varlog
+              mountPath: /var/log
+            - name: containers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
       volumes:
-      - name: config
-        configMap:
-          name: filebeat-config
-      - name: varlog
-        hostPath:
-          path: /var/log
-      - name: containers
-        hostPath:
-          path: /var/lib/docker/containers
-      - name: applogs
-        emptyDir: {}    
+        - name: config
+          configMap:
+            name: filebeat-config
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: containers
+          hostPath:
+            path: /var/lib/docker/containers

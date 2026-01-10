@@ -7,12 +7,20 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: sre-pleno-app
-  minReplicas: 2
+  minReplicas: 2 # Requisito mínimo
   maxReplicas: 5
   metrics:
+    # Requisito: Autoscaling baseado em CPU > 70%
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: 50
+          averageUtilization: 70
+    # Requisito: Autoscaling baseado em memória > 75%
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75

@@ -1,20 +1,24 @@
+from flask import Flask, jsonify
 import logging
 import os
-from fastapi import FastAPI
-from datetime import datetime
+from prometheus_client import make_wsgi_app, Counter, Histogram
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
-# ============================
-# Caminho de logs (alinhado com o volume)
-# ============================
+app = Flask(__name__)
 
+# --- MÉTRICAS PROMETHEUS ---
+# O endpoint /metrics será criado automaticamente pelo DispatcherMiddleware
+REQUEST_COUNT = Counter('http_requests_total', 'Total Request Count', ['method', 'endpoint', 'status'])
+REQUEST_LATENCY = Histogram('http_request_duration_seconds', 'Request Latency')
+
+app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {
+    '/metrics': make_wsgi_app()
+})
+
+# --- CONFIGURAÇÃO DE LOGS ---
 LOG_DIR = "/app/logs"
-LOG_FILE = f"{LOG_DIR}/app.log"
-
+LOG_FILE = os.path.join(LOG_DIR, "app.log")
 os.makedirs(LOG_DIR, exist_ok=True)
-
-# ============================
-# Configuração de logging
-# ============================
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,45 +26,26 @@ logging.basicConfig(
     handlers=[
         logging.FileHandler(LOG_FILE),
         logging.StreamHandler()
-    ],
+    ]
 )
 
-logger = logging.getLogger(__name__)
-logger.info("Aplicação FastAPI iniciada")
+# --- ROTAS ---
+@app.route("/")
+def index():
+    # O bloco 'with' mede o tempo e alimenta o Histogram de latência
+    with REQUEST_LATENCY.time():
+        app.logger.info("Root endpoint accessed")
+        REQUEST_COUNT.labels(method='GET', endpoint='/', status=200).inc()
+        return jsonify({
+            "app": "sre-pleno-app",
+            "message": "Application is running"
+        })
 
-# ============================
-# Aplicação FastAPI
-# ============================
-
-app = FastAPI(
-    title="SRE Pleno App",
-    description="Aplicação de teste para desafio SRE",
-    version="1.0.0",
-)
-
-# ============================
-# Endpoints
-# ============================
-
-@app.get("/")
-def root():
-    logger.info("Endpoint / acessado")
-    return {
-        "message": "Aplicação SRE Pleno rodando",
-        "timestamp": datetime.utcnow().isoformat()
-    }
-
-@app.get("/health")
+@app.route("/health")
 def health():
-    logger.info("Health check realizado")
-    return {
-        "status": "green",
-        "service": "sre-pleno-app"
-    }
+    app.logger.info("Health check accessed")
+    return jsonify({"status": "green"})
 
-@app.get("/error")
-def error():
-    logger.error("Erro simulado acionado")
-    return {
-        "error": "Erro simulado para testes de observabilidade"
-    }
+if __name__ == "__main__":
+    # Porta 8080 alinhada com Service e Dockerfile
+    app.run(host="0.0.0.0", port=8080)

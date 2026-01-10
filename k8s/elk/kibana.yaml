@@ -2,12 +2,12 @@ apiVersion: kibana.k8s.elastic.co/v1
 kind: Kibana
 metadata:
   name: sre-kibana
-  namespace: elastic-system
+  namespace: sre-app # Ajustado para o seu namespace de trabalho
 spec:
   version: 8.11.1
   count: 1
   elasticsearchRef:
-    name: sre-elasticsearch
+    name: sre-elasticsearch # Certifique-se que o nome do seu Elasticsearch no elasticsearch.yaml é este
   podTemplate:
     spec:
       containers:

@@ -1,0 +1,38 @@
+name: SRE App CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flask pytest flake8
+
+      - name: Lint with flake8
+        run: |
+          # Para o build se houver erros de sintaxe Python
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Run Tests
+        run: |
+          # Simula um teste unitário simples
+          python -c "from app import app; assert app.name == 'app'"
+
+      - name: Build Docker Image
+        run: |
+          docker build -t sre-pleno-app:${{ github.sha }} .
+          docker tag sre-pleno-app:${{ github.sha }} sre-pleno-app:latest

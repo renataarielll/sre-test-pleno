@@ -2,7 +2,7 @@ apiVersion: elasticsearch.k8s.elastic.co/v1
 kind: Elasticsearch
 metadata:
   name: sre-elasticsearch
-  namespace: elastic-system
+  namespace: sre-app
 spec:
   version: 8.11.1
   nodeSets:
