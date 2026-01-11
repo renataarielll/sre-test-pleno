@@ -1,4 +1,4 @@
-name: SRE App CI/CD
+name: SRE App CI/CD Pipeline
 
 on:
   push:
@@ -7,7 +7,29 @@ on:
     branches: [ "main" ]
 
 jobs:
+  # ETAPA 1: LINT (Segurança e Padronização - Requisito Tarefa 4)
+  lint:
+    name: Code and Docker Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Dockerfile Lint (Hadolint)
+        # Justificativa SRE: Garante que o Dockerfile segue boas práticas de segurança e otimização.
+        uses: hadolint/hadolint-action@v1.6.0
+        with:
+          dockerfile: Dockerfile
+
+      - name: Python Lint (Flake8)
+        run: |
+          pip install flake8
+          # Para o build se houver erros críticos de sintaxe
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+  # ETAPA 2: BUILD E TEST (Confiabilidade)
   build-and-test:
+    name: Build and Unit Tests
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -15,24 +37,34 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.9"
+          python-version: "3.11" # Alinhado com o seu Dockerfile
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flask pytest flake8
+          pip install -r app/requirements.txt pytest
 
-      - name: Lint with flake8
+      - name: Run Unit Tests
         run: |
-          # Para o build se houver erros de sintaxe Python
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Simula validação da estrutura do FastAPI antes do build da imagem
+          pytest
 
-      - name: Run Tests
-        run: |
-          # Simula um teste unitário simples
-          python -c "from app import app; assert app.name == 'app'"
+  # ETAPA 3: ARTIFACT & DEPLOY (Automação Completa - Requisito Tarefa 4)
+  deploy:
+    name: Continuous Deployment
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
 
       - name: Build Docker Image
+        # Justificativa SRE: Versionamento via GitHub SHA para rastreabilidade total (Imutabilidade).
         run: |
           docker build -t sre-pleno-app:${{ github.sha }} .
           docker tag sre-pleno-app:${{ github.sha }} sre-pleno-app:latest
+
+      - name: Deploy to Kubernetes (Dry-run/Validation)
+        # Justificativa SRE: Valida os manifestos K8S antes da aplicação real.
+        run: |
+          kubectl apply -f k8s/ --dry-run=client
+          echo "Manifestos validados com sucesso para o namespace sre-app"
