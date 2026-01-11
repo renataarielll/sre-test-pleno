@@ -6,7 +6,7 @@ metadata:
   labels:
     app: sre-pleno-app
 spec:
-  replicas: 2
+  [cite_start]replicas: 2 # Atende ao requisito de alta disponibilidade inicial [cite: 45, 59]
   selector:
     matchLabels:
       app: sre-pleno-app
@@ -14,41 +14,48 @@ spec:
     metadata:
       labels:
         app: sre-pleno-app
+      # ESTRATÉGIA DE MONITORAMENTO (Tarefa 3):
+      # Annotations necessárias para o Prometheus realizar o scraping automático das métricas [cite: 90, 95, 108]
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: app
-        image: sre-pleno-app:v1  # Certifique-se de que deu o build com essa tag
+        image: sre-pleno-app:v3 
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         
-        # Configuração de Logs para o Filebeat (Volume Mount)
-        volumeMounts:
-        - name: app-logs
-          mountPath: /app/logs
-
-        # Ajuste de Recursos para evitar OOMKilled
+        # GESTÃO DE RECURSOS (Tarefa 2):
+        # Definidos limites e requisições para garantir previsibilidade e evitar OOMKilled [cite: 64, 80]
         resources:
           requests:
-            memory: "64Mi"
-            cpu: "100m"
+            [cite_start]memory: "128Mi" # Ajustado conforme especificação técnica do teste [cite: 67]
+            [cite_start]cpu: "100m"     # Reserva mínima de CPU garantida pelo Scheduler [cite: 66]
           limits:
-            memory: "128Mi"
-            cpu: "250m"
+            [cite_start]memory: "256Mi" # Limite máximo para evitar que um pod afete o nó [cite: 70]
+            [cite_start]cpu: "200m"     # Limite de processamento para controle de custo/performance [cite: 69]
 
-        # Health Checks (Baseados no seu código Flask)
+        # HEALTH CHECKS (Tarefa 2):
+        # Implementação de Probes para garantir que o tráfego só chegue a pods saudáveis [cite: 53, 79]
         livenessProbe:
           httpGet:
-            path: /health
+            [cite_start]path: /health   # Verifica se o container deve ser reiniciado [cite: 73]
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 10
         readinessProbe:
           httpGet:
-            path: /health
+            [cite_start]path: /ready    # Verifica se o pod está pronto para receber tráfego [cite: 77]
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 5
+
+        volumeMounts:
+        - name: app-logs
+          mountPath: /app/logs
 
       volumes:
       - name: app-logs
@@ -64,6 +71,6 @@ spec:
     app: sre-pleno-app
   ports:
     - protocol: TCP
-      port: 80
-      targetPort: 8080
-  type: ClusterIP
+      port: 80         # Porta externa do serviço
+      targetPort: 8080 # Porta interna do container (mapeada no Dockerfile)
+  [cite_start]type: ClusterIP      # Exposição interna estável para o cluster [cite: 47]

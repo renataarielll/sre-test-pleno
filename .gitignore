@@ -1,0 +1,31 @@
+# =================================================================
+# AMBIENTE VIRTUAL (Reprodutibilidade)
+# =================================================================
+# Justificativa SRE: A pasta .venv contém binários locais. 
+# A infraestrutura deve ser reconstruída via Dockerfile e requirements.txt.
+.venv/
+venv/
+
+# =================================================================
+# CACHE DO PYTHON (Limpeza e Performance)
+# =================================================================
+# Justificativa SRE: Arquivos __pycache__ são resíduos de execução local 
+# e não devem poluir o sistema de controle de versão.
+**/__pycache__/
+*.py[cod]
+
+# =================================================================
+# CONFIGURAÇÕES DE IDE E SO
+# =================================================================
+# Justificativa SRE: O projeto deve ser agnóstico ao editor (VS Code/PyCharm).
+.vscode/
+.idea/
+.DS_Store
+
+# =================================================================
+# SEGURANÇA (Hardening)
+# =================================================================
+# Justificativa SRE: Evita o vazamento acidental de segredos/chaves.
+.env
+*.pem
+*.key
