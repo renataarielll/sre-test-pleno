@@ -60,7 +60,7 @@ Para validar a integridade da infraestrutura, foram realizados testes diretament
 ### 1. Estado dos Objetos no Namespace
 Verificação da saúde dos Pods, Services e Deployments:
 # Comando: kubectl get all -n sre-app
-\`\`\`bash
+```
 NAME                                 READY   STATUS    RESTARTS   AGE
 pod/sre-pleno-app-7c7ccffbb8-4w99q   1/1     Running   0          64m
 pod/sre-pleno-app-7c7ccffbb8-cqz25   1/1     Running   0          64m
@@ -76,13 +76,13 @@ replicaset.apps/sre-pleno-app-7c7ccffbb8   2         2         2       65m
 
 NAME                                                    REFERENCE                  TARGETS                        MINPODS   MAXPODS   REPLICAS   AGE
 horizontalpodautoscaler.autoscaling/sre-pleno-app-hpa   Deployment/sre-pleno-app   cpu: 1%/70%, memory: 35%/75%   2         5         2          63m
-\`\`\`
+```
 
 ### 2.Recursos e Health Checks (Self-Healing)
 Prova da configuração de Probes (Liveness/Readiness) e limites de CPU/Memória:
 # Comando: kubectl describe deployment sre-pleno-app -n sre-app
 
-\`\`\`bash
+```
 kubectl describe deployment sre-pleno-app -n sre-app
 Name:                   sre-pleno-app
 Namespace:              sre-app
@@ -133,26 +133,27 @@ Events:
   Normal  ScalingReplicaSet  57m   deployment-controller  Scaled up replica set sre-pleno-app-7c7ccffbb8 from 4 to 5
   Normal  ScalingReplicaSet  49m   deployment-controller  Scaled down replica set sre-pleno-app-7c7ccffbb8 from 5 to 3
   Normal  ScalingReplicaSet  44m   deployment-controller  Scaled down replica set sre-pleno-app-7c7ccffbb8 from 3 to 2
-\`\`\`
+```
 
 
 ### 3.Autoscaling (HPA)
 Evidência do Horizontal Pod Autoscaler monitorando as métricas de utilização:
 # Comando: kubectl get hpa -n sre-app
 
-\`\`\`bash  
+```
 NAME                REFERENCE                  TARGETS                        MINPODS   MAXPODS   REPLICAS   AGE
 sre-pleno-app-hpa   Deployment/sre-pleno-app   cpu: 1%/70%, memory: 35%/75%   2         5         2          70m
-\`\`\`
+```
 
 
 ### 4.Logs Estruturados (Padrão ELK)
 Demonstração do formato de log gerado pela aplicação, pronto para o parsing do Logstash:
 # Comando: kubectl logs -l app=sre-pleno-app -n sre-app --tail=1
 
-\`\`\`bash  
+```
 2026-01-11 23:17:25,203 INFO 10.244.0.1 - - [11/Jan/2026 23:17:25] "GET /health HTTP/1.1" 200 -
 2026-01-11 23:17:25,203 INFO 10.244.0.1 - - [11/Jan/2026 23:17:25] "GET /health HTTP/1.1" 200 -
-\`\`\`
+```
 
 👩‍💻 Desenvolvido por **Renata Delgado**
+
