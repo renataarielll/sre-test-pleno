@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: app
-        image: sre-pleno-app:v3
+        image: sre-pleno-app:v4
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080

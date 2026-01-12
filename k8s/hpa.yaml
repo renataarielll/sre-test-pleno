@@ -2,6 +2,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: sre-pleno-app-hpa
+  namespace: sre-app
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
