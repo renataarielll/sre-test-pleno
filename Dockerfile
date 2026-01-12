@@ -1,14 +1,28 @@
+# Estágio 1: Builder (Compilação e Dependências)
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+# Instalamos as dependências em um diretório temporário
+RUN pip install --no-cache-dir --prefix=/install flask prometheus-client werkzeug
+
+# Estágio 2: Runtime (Imagem Final e Segura)
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Forçamos a instalação das dependências essenciais aqui
-RUN pip install --no-cache-dir flask prometheus-client werkzeug
+# Copiamos apenas as dependências instaladas do estágio anterior
+COPY --from=builder /install /usr/local
 
-# Copiamos o conteúdo da pasta app para dentro de /app no container
+# Copiamos o código da aplicação
 COPY app/ .
+
+# SEGURANÇA: Criamos um usuário comum para não rodar como root
+RUN adduser --disabled-password --gecos '' appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 8080
 
-# O seu log mostrou que o arquivo se chama main.py, então vamos rodar ele:
 CMD ["python", "main.py"]
