@@ -52,6 +52,14 @@ Demonstrar a capacidade de diagnóstico foi parte fundamental do processo:
 
 **Resolução:** Ajuste do SecurityContext no DaemonSet do Filebeat para garantir acesso de leitura aos logs do host.
 
+### 3.4 Refinamento de Probes e Readiness
+
+**Dificuldade:** Identifiquei via logs (kubectl logs) que o Kubernetes estava recebendo erros 404 no endpoint /ready.
+
+**Debug:** Percebi uma inconsistência entre o manifesto do Kubernetes e as rotas implementadas na aplicação FastAPI.
+
+**Resolução:** Unifiquei os endpoints de Liveness e Readiness para /health e realizei um novo rollout. O resultado foi uma estabilização imediata dos logs, com 100% das requisições retornando HTTP 200, garantindo que o Load Balancer apenas envie tráfego para Pods totalmente operacionais.
+
 ## 4. Observabilidade e Escalabilidade (O que foi entregue)
 
 ### 4.1 Métricas (Prometheus & Grafana)
