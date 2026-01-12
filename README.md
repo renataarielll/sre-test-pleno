@@ -8,6 +8,7 @@ Este projeto consiste em uma aplicação FastAPI containerizada e orquestrada em
 * Minikube (configurado com 4GB RAM)
 * kubectl
 * Docker
+>>>>>>>>> Temporary merge branch 2
 
 **Execução Local:**
 1. Inicie o cluster: `minikube start --memory 4096`
@@ -21,8 +22,17 @@ A solução foi desenhada para ser escalável e resiliente:
 * **K8S:** Deployment com 2 réplicas iniciais, HPA (Horizontal Pod Autoscaler) e Resource Quotas.
 * **Monitoring:** Prometheus para coleta via Annotations e Grafana para visualização.
 * **Logging:** Stack ELK (Elasticsearch, Logstash, Kibana) via manifestos declarativos.
+>>>>>>>>> Temporary merge branch 2
 
 
+<<<<<<<<< Temporary merge branch 1
+## 🚀 Como Executar
+
+### 1. Preparação do Cluster
+```bash
+minikube start --memory=6144 --cpus=4
+eval $(minikube docker-env)
+=========
 
 ## 🛠 Componentes e Decisões Técnicas
 
@@ -156,3 +166,4 @@ Demonstração do formato de log gerado pela aplicação, pronto para o parsing 
 \`\`\`
 
 👩‍💻 Desenvolvido por **Renata Delgado**
+>>>>>>>>> Temporary merge branch 2
