@@ -1,4 +1,4 @@
-# SRE Pleno Test - [Seu Nome]
+# SRE Pleno Test 
 
 ## 🚀 Quick Start
 
@@ -21,8 +21,6 @@ A solução foi desenhada para ser escalável e resiliente:
 * **K8S:** Deployment com 2 réplicas iniciais, HPA (Horizontal Pod Autoscaler) e Resource Quotas.
 * **Monitoring:** Prometheus para coleta via Annotations e Grafana para visualização.
 * **Logging:** Stack ELK (Elasticsearch, Logstash, Kibana) via manifestos declarativos.
-
-
 
 ## 🛠 Componentes e Decisões Técnicas
 
@@ -51,7 +49,6 @@ A solução foi desenhada para ser escalável e resiliente:
 ## 📈 Decisões Técnicas
 * [cite_start]Escolha do **FastAPI**: Pela performance assíncrona superior para microserviços. [cite: 9, 22]
 * [cite_start]**Infrastructure as Code (IaC)**: Todos os recursos, incluindo dashboards, foram versionados para garantir reprodutibilidade. [cite: 6, 200]
-
 
 ## 📊 Evidências de Funcionamento (CLI)
 
@@ -135,7 +132,6 @@ Events:
   Normal  ScalingReplicaSet  44m   deployment-controller  Scaled down replica set sre-pleno-app-7c7ccffbb8 from 3 to 2
 ```
 
-
 ### 3.Autoscaling (HPA)
 Evidência do Horizontal Pod Autoscaler monitorando as métricas de utilização:
 # Comando: kubectl get hpa -n sre-app
@@ -144,7 +140,6 @@ Evidência do Horizontal Pod Autoscaler monitorando as métricas de utilização
 NAME                REFERENCE                  TARGETS                        MINPODS   MAXPODS   REPLICAS   AGE
 sre-pleno-app-hpa   Deployment/sre-pleno-app   cpu: 1%/70%, memory: 35%/75%   2         5         2          70m
 ```
-
 
 ### 4.Logs Estruturados (Padrão ELK)
 Demonstração do formato de log gerado pela aplicação, pronto para o parsing do Logstash:
@@ -156,4 +151,3 @@ Demonstração do formato de log gerado pela aplicação, pronto para o parsing 
 ```
 
 👩‍💻 Desenvolvido por **Renata Delgado**
-
