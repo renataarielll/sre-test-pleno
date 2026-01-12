@@ -8,7 +8,6 @@ Este projeto consiste em uma aplicação FastAPI containerizada e orquestrada em
 * Minikube (configurado com 4GB RAM)
 * kubectl
 * Docker
->>>>>>>>> Temporary merge branch 2
 
 **Execução Local:**
 1. Inicie o cluster: `minikube start --memory 4096`
@@ -22,17 +21,6 @@ A solução foi desenhada para ser escalável e resiliente:
 * **K8S:** Deployment com 2 réplicas iniciais, HPA (Horizontal Pod Autoscaler) e Resource Quotas.
 * **Monitoring:** Prometheus para coleta via Annotations e Grafana para visualização.
 * **Logging:** Stack ELK (Elasticsearch, Logstash, Kibana) via manifestos declarativos.
->>>>>>>>> Temporary merge branch 2
-
-
-<<<<<<<<< Temporary merge branch 1
-## 🚀 Como Executar
-
-### 1. Preparação do Cluster
-```bash
-minikube start --memory=6144 --cpus=4
-eval $(minikube docker-env)
-=========
 
 ## 🛠 Componentes e Decisões Técnicas
 
@@ -62,15 +50,14 @@ eval $(minikube docker-env)
 * [cite_start]Escolha do **FastAPI**: Pela performance assíncrona superior para microserviços. [cite: 9, 22]
 * [cite_start]**Infrastructure as Code (IaC)**: Todos os recursos, incluindo dashboards, foram versionados para garantir reprodutibilidade. [cite: 6, 200]
 
-
 ## 📊 Evidências de Funcionamento (CLI)
 
 Para validar a integridade da infraestrutura, foram realizados testes diretamente no cluster via `kubectl`.
 
 ### 1. Estado dos Objetos no Namespace
 Verificação da saúde dos Pods, Services e Deployments:
-#### Comando: kubectl get all -n sre-app
-\`\`\`bash
+# Comando: kubectl get all -n sre-app
+```
 NAME                                 READY   STATUS    RESTARTS   AGE
 pod/sre-pleno-app-7c7ccffbb8-4w99q   1/1     Running   0          64m
 pod/sre-pleno-app-7c7ccffbb8-cqz25   1/1     Running   0          64m
@@ -86,13 +73,13 @@ replicaset.apps/sre-pleno-app-7c7ccffbb8   2         2         2       65m
 
 NAME                                                    REFERENCE                  TARGETS                        MINPODS   MAXPODS   REPLICAS   AGE
 horizontalpodautoscaler.autoscaling/sre-pleno-app-hpa   Deployment/sre-pleno-app   cpu: 1%/70%, memory: 35%/75%   2         5         2          63m
-\`\`\`
+```
 
 ### 2.Recursos e Health Checks (Self-Healing)
 Prova da configuração de Probes (Liveness/Readiness) e limites de CPU/Memória:
-#### Comando: kubectl describe deployment sre-pleno-app -n sre-app
+# Comando: kubectl describe deployment sre-pleno-app -n sre-app
 
-\`\`\`bash
+```
 kubectl describe deployment sre-pleno-app -n sre-app
 Name:                   sre-pleno-app
 Namespace:              sre-app
@@ -143,27 +130,24 @@ Events:
   Normal  ScalingReplicaSet  57m   deployment-controller  Scaled up replica set sre-pleno-app-7c7ccffbb8 from 4 to 5
   Normal  ScalingReplicaSet  49m   deployment-controller  Scaled down replica set sre-pleno-app-7c7ccffbb8 from 5 to 3
   Normal  ScalingReplicaSet  44m   deployment-controller  Scaled down replica set sre-pleno-app-7c7ccffbb8 from 3 to 2
-\`\`\`
-
+```
 
 ### 3.Autoscaling (HPA)
 Evidência do Horizontal Pod Autoscaler monitorando as métricas de utilização:
-#### Comando: kubectl get hpa -n sre-app
+# Comando: kubectl get hpa -n sre-app
 
-\`\`\`bash  
+```
 NAME                REFERENCE                  TARGETS                        MINPODS   MAXPODS   REPLICAS   AGE
 sre-pleno-app-hpa   Deployment/sre-pleno-app   cpu: 1%/70%, memory: 35%/75%   2         5         2          70m
-\`\`\`
-
+```
 
 ### 4.Logs Estruturados (Padrão ELK)
 Demonstração do formato de log gerado pela aplicação, pronto para o parsing do Logstash:
-#### Comando: kubectl logs -l app=sre-pleno-app -n sre-app --tail=1
+# Comando: kubectl logs -l app=sre-pleno-app -n sre-app --tail=1
 
-\`\`\`bash  
+```
 2026-01-11 23:17:25,203 INFO 10.244.0.1 - - [11/Jan/2026 23:17:25] "GET /health HTTP/1.1" 200 -
 2026-01-11 23:17:25,203 INFO 10.244.0.1 - - [11/Jan/2026 23:17:25] "GET /health HTTP/1.1" 200 -
-\`\`\`
+```
 
 👩‍💻 Desenvolvido por **Renata Delgado**
->>>>>>>>> Temporary merge branch 2
