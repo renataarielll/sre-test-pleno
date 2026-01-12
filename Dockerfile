@@ -9,6 +9,12 @@ RUN pip install --no-cache-dir --prefix=/install flask prometheus-client werkzeu
 # Estágio 2: Runtime (Imagem Final e Segura)
 FROM python:3.11-slim
 
+# Definição de variáveis de ambiente conforme requisitos do desafio (Tarefa 1).
+ENV APP_ENV=staging
+ENV PORT=8080
+# Garante que o output do Python seja enviado direto para o terminal (logs) sem buffer.
+ENV PYTHONUNBUFFERED=1 
+
 WORKDIR /app
 
 # Copiamos apenas as dependências instaladas do estágio anterior
