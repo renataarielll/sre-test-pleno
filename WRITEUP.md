@@ -1,107 +1,322 @@
-# 📑 Relatório Técnico Detalhado – SRE Challenge (Pleno)
+# 📄 Relato Técnico – Linha do Tempo Completa de Implementação
 
-## 1. Introdução e Escopo do Projeto
+## Projeto: sre-pleno-app
 
-Este documento detalha a implementação do projeto sre-test-pleno, desenvolvido para o desafio técnico de SRE. O foco principal foi a criação de um ecossistema orquestrado que garante observabilidade total, escalabilidade dinâmica e resiliência, utilizando a filosofia de Infrastructure as Code (IaC).
+Este documento descreve cronologicamente, de forma detalhada e transparente, todo o processo de construção, correção e validação do projeto sre-pleno-app, desde a escolha da aplicação até a estabilização do cluster Kubernetes com observabilidade, escalabilidade e segurança.
 
-## 2. Arquitetura da Solução e Decisões de Design
+O objetivo foi demonstrar competências práticas de SRE, incluindo troubleshooting real, tomada de decisão sob restrições de hardware e entendimento profundo de Kubernetes, Docker e observabilidade.
 
-### 2.1 Camada de Aplicação (FastAPI)
+## 🕒 T-0 — Escolha da Aplicação e Design Inicial
 
-**Framework:** Optou-se pelo FastAPI pela sua performance assíncrona e suporte nativo a health checks.
+### Objetivo do Teste
 
-**Saúde e Prontidão:** Implementação de endpoints /health (Liveness) e /ready (Readiness) para gestão inteligente do ciclo de vida dos pods.
+### Construir uma aplicação containerizada capaz de:
 
-### 2.2 Estratégia de Containerização (Docker)
+* Expor health check
+* Expor métricas Prometheus
+* Gerar logs estruturados
+* Escalar automaticamente em Kubernetes
+* Integrar com stack de observabilidade (Prometheus + ELK)
 
-**Multi-stage Build:** Técnica aplicada para garantir imagens leves (baseadas em python:3.11-slim) e seguras, eliminando ferramentas de build do ambiente de execução.
+### Escolha Tecnológica
 
-**Segurança (Hardening):** Execução com utilizador não-privilegiado (USER appuser), reduzindo a superfície de ataque.
+* **Linguagem:** Python
+* **Framework:** Flask (simplicidade e previsibilidade)
+* **Servidor:** WSGI nativo
+* **Métricas:** prometheus-client
+* **Logs:** logging nativo com saída para arquivo e stdout
 
-### 2.3 Orquestração e Resiliência (Kubernetes)
+### Estrutura Final da Aplicação
 
-**Gestão de Recursos:** Definição rigorosa de requests e limits (CPU/Memória) para evitar o erro de OOMKilled.
+```
+app/
+ ├── main.py
+ ├── requirements.txt
+``` 
 
-**Self-Healing:** Configuração de Probes para reinício automático em caso de falhas críticas.
+### Decisão Importante – Logs
 
-## 3. Diário de Bordo: Dificuldades Enfrentadas e Debugs Realizados
+* Inicialmente logs seriam apenas em stdout
+* Decisão SRE: escrever também em arquivo local
+* Motivo: permitir Filebeat sidecar/DaemonSet coletar logs sem depender exclusivamente do runtime
 
-Demonstrar a capacidade de diagnóstico foi parte fundamental do processo:
+**📌 Caminho definido:**
+```
+/app/logs/app.log
+```
 
-### 3.1 Correção do Metrics Server e HPA
+## 🕒 T-1 — Implementação da Aplicação (main.py)
 
-**Dificuldade:** O HPA exibia o consumo de CPU como <unknown>.
+### Funcionalidades Implementadas
 
-**Debug:** Através de kubectl logs no namespace kube-system, identifiquei que o Metrics Server não comunicava com os nós devido a certificados auto-assinados.
+* ```/ → endpoint principal```
 
-**Resolução:** Reconfiguração do addon do Minikube com as flags de segurança adequadas para permitir a monitorização de recursos.
+* ```/health → health check```
 
-### 3.2 Parsing de Logs com Grok (ELK)
+* ```/metrics → métricas Prometheus```
 
-**Dificuldade:** Os logs eram ingeridos como texto bruto, impedindo a análise de latência.
+* ```Logs em arquivo e stdout```
 
-**Debug:** Utilizei o Grok Debugger e testes no stdout do Logstash para ajustar o padrão de regex.
+* ```Métrica de contagem e latência por request```
 
-**Resolução:** Criação de um pipeline que extrai level, endpoint e latency (convertendo este último para integer), permitindo dashboards de performance reais.
+### Código Final (resumo conceitual)
 
-### 3.3 Conetividade do Filebeat
+* Criação automática do diretório ```/app/logs```
 
-***Dificuldade:** Falha na leitura dos logs no caminho /var/log/pods.
+* Logs INFO para:
 
-**Debug:** O kubectl describe pod revelou problemas de permissões no mount do volume.
+    * start da aplicação
 
-**Resolução:** Ajuste do SecurityContext no DaemonSet do Filebeat para garantir acesso de leitura aos logs do host.
+    * acessos ao ```/health```
 
-### 3.4 Refinamento de Probes e Readiness
+* DispatcherMiddleware para ```/metrics```
 
-**Dificuldade:** Identifiquei via logs (kubectl logs) que o Kubernetes estava recebendo erros 404 no endpoint /ready.
+**📌 Confirmação prática:**
 
-**Debug:** Percebi uma inconsistência entre o manifesto do Kubernetes e as rotas implementadas na aplicação FastAPI.
+```
+kubectl exec -it <pod> -- sh
+ls /app/logs
+cat /app/logs/app.log
+```
 
-**Resolução:** Unifiquei os endpoints de Liveness e Readiness para /health e realizei um novo rollout. O resultado foi uma estabilização imediata dos logs, com 100% das requisições retornando HTTP 200, garantindo que o Load Balancer apenas envie tráfego para Pods totalmente operacionais.
+## 🕒 T-2 — Containerização (Docker)
 
-## 4. Observabilidade e Escalabilidade (O que foi entregue)
+### Objetivo
 
-### 4.1 Métricas (Prometheus & Grafana)
+Criar uma imagem:
+* Imutável
+* Simples
+* Compatível com Kubernetes local (Minikube)
 
-**Service Discovery:** Implementado via Kubernetes Annotations, permitindo que o Prometheus encontre a aplicação automaticamente sem intervenção manual.
+### Decisões
 
-### 4.2 Logs (ELK Stack)
+* Base: ```python:3.11-slim```
+* Execução como usuário não-root
+* Porta exposta: ```8080```
+* Diretório de trabalho: ```/app```
 
-**Fluxo:** Filebeat (coleta) -> Logstash (filtro/parsing) -> Elasticsearch (armazenamento) -> Kibana (visualização).
+### Build da imagem
+```
+docker build -t sre-pleno-app:v4 .
+```
 
-### 4.3 Escalabilidade (HPA)
+### Problema Real Encontrado
 
-**Validação:** Teste de carga realizado com load-generator. O sistema escalou de 2 para 5 réplicas ao atingir 70% de CPU, comprovando a eficácia da configuração de auto-scaling.
+Pods rodavam como root, mesmo após criar usuário no Dockerfile.
 
-## 5. Evolução e Melhoria Contínua
+### Diagnóstico
 
-O projeto foi desenhado para ser expansível, com os seguintes próximos passos planeados:
+O Minikube estava reutilizando imagem em cache.
 
-### 5.1 Implementação de OpenTelemetry (OTel)
+### Correção
+```
+minikube image rm sre-pleno-app:v3
+minikube image load sre-pleno-app:v4
+kubectl rollout restart deployment sre-pleno-app -n sre-app
+```
 
-A inclusão do OpenTelemetry será um aditivo de valor à stack atual (Prometheus/ELK):
+**📌 Resultado:**
+```
+kubectl exec -it <pod> -- id
+uid=1000(appuser)
+```
 
-**Tracing Distribuído:** Adicionar rastreio de ponta a ponta para visualizar o fluxo das requisições entre serviços e base de dados.
+## 🕒 T-3 — Kubernetes Deployment
 
-**Unificação de Sinais:** Utilizar o OTel Collector como um gateway único para receber métricas e traces, podendo exportar simultaneamente para o Prometheus e para ferramentas de tracing como o Jaeger.
+### Namespace
+```
+kubectl create namespace sre-app
+```
 
-**Contextualização:** Correlacionar um log específico (do ELK) com um trace ID (do OTel), reduzindo drasticamente o tempo de diagnóstico (MTTR).
+### Deployment
 
-### 5.2 Eficiência de Recursos e FinOps
+* Réplicas iniciais: 2
+* Probes:
+    * ```livenessProbe: /health```
+    * ```readinessProbe: /health```
+* Resources (essencial para HPA):
+```
+requests:
+  cpu: 100m
+  memory: 128Mi
+limits:
+  cpu: 200m
+  memory: 256Mi
+```
 
-**Justificativa de Requests/Limits:** A definição cuidadosa dos recursos (requests de 100m de CPU e 128Mi de memória) não foi apenas para estabilidade, mas para otimização de custos. Ao definir Requests baixos, permitimos uma maior densidade de Pods por Nó no cluster, reduzindo o gasto com infraestrutura.
+### Erro Encontrado
+Pods em ```CrashLoopBackOff```
+### Causa
+Probe apontava para endpoint inexistente ```(/ready)```
+### Correção
+Alteração para ```/health```
 
-**HPA como Ferramenta de Economia:** O uso do Autoscaling garante que só pagaremos por 5 réplicas durante picos de tráfego. Em horários de baixa demanda, o sistema retorna para 2 réplicas, evitando o desperdício de recursos ociosos.
+## 🕒 T-4 — Service e Acesso
+### Service ClusterIP
 
-### 5.3 Segurança e Automação
+* Porta externa: 80
+* Target: 8080
+```
+kubectl port-forward svc/sre-pleno-app-service 8081:80 -n sre-app
+curl http://localhost:8081/health
+```
 
-**Network Policies:** Implementação de isolamento de rede L3/L4 entre namespaces.
+## 🕒 T-5 — Métricas Prometheus
+### Decisão
+Usar annotations, evitando ServiceMonitor (menos complexidade)
+```
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: "/metrics"
+```
+### Validação
+```
+kubectl get pods -n sre-app -o jsonpath='{.items[*].metadata.annotations}'
+```
+## 🕒 T-6 — HPA (Escalabilidade)
+### Implementação
+* CPU > 70%
+* Memória > 75%
+* Mínimo: 2 pods
+* Máximo: 5 pods
 
-**GitOps:** Integração com ArgoCD para garantir que o cluster reflita sempre o estado do repositório.
+### Erros Reais Encontrados
 
-## 6. Conclusão
+1. HPA criado no namespace default
+2. Métricas apareciam como <unknown>
 
-Este projeto reflete o compromisso com a Engenharia de Confiabilidade. Mais do que uma aplicação funcional, entregou-se um ecossistema documentado, resiliente e preparado para a integração de tecnologias modernas como o OpenTelemetry.
+### Correções
 
-Autora: **Renata Delgado**
+* Adição explícita de namespace: sre-app
+* Inclusão de resources.requests
+
+### Validação
+```
+kubectl get hpa -n sre-app
+```
+
+## 🕒 T-7 — Teste de Carga
+### Execução
+```
+kubectl run load-generator \
+  --rm -it \
+  --image=busybox \
+  -n sre-app -- \
+  sh -c "while true; do wget -q -O- http://sre-pleno-app-service; done"
+```
+### Resultado
+* Escala automática para até 5 pods
+* Logs intensificados
+* Métricas refletidas corretamente
+
+## 🕒 T-8 — Stack ELK (Observabilidade de Logs)
+### Decisão Crítica – Limitação de Hardware
+
+O ambiente local não suportava:
+* Elasticsearch (2Gi)
+* Kibana (1Gi)
+* Prometheus
+* Aplicação
+* Minikube
+
+### Ajustes Necessários
+* Redução do Minikube:
+```
+minikube start --memory=4096 --cpus=2
+```
+### Impacto
+
+❗ Dashboards prontos do Kibana não puderam ser criados, pois:
+* Kibana frequentemente entrava em Pending ou Timeout
+* Consumo de memória tornava o cluster instável
+
+**📌 Decisão consciente documentada: priorizar ingestão e visibilidade de logs em vez de dashboards visuais.**
+
+## 🕒 T-9 — Elasticsearch
+### Implementação
+* Operador Elastic (ECK)
+* 1 nó
+* mmap desativado
+```
+node.store.allow_mmap: false
+```
+## 🕒 T-10 — Kibana
+* 1 instância
+* Conectada ao Elasticsearch via elasticsearchRef
+* Recursos reduzidos
+
+## 🕒 T-11 — Filebeat (Coleta de Logs)
+### Estratégia
+* DaemonSet
+* Coleta logs de:
+```
+/var/log/containers/*.log
+```
+### Configuração
+* Envio para Logstash (conceitual)
+* Enriquecimento com metadata Kubernetes
+### Erros Encontrados
+* YAML inválido (containers duplicados)
+* ```containers: Required value```
+* Namespace incorreto
+### Correções
+* Reescrita completa do manifesto
+* Validação com:
+```
+kubectl apply -f filebeat.yaml --dry-run=client
+```
+### Estado Final
+```
+kubectl get pods -n sre-app | grep filebeat
+filebeat-xxxxx   1/1 Running
+```
+### 🔐 Segurança — Ajustes Implementados
+* Execução non-root (UID 1000)
+* Resource limits definidos
+* Namespace isolado
+* Superfície mínima de imagem
+* Sem exposição externa desnecessária
+* TLS do Elasticsearch mantido (verification_mode none apenas em ambiente local)
+
+### 🔄 CI/CD — Decisão Consciente
+
+#### Por que não implementar pipeline completo?
+* Escopo local
+* Ambiente sem registry privado
+* Foco em SRE runtime
+#### O que foi entregue
+* Estrutura ```/ci```
+* Docker build reproduzível
+* Manifests declarativos
+* Projeto pronto para CI GitHub Actions (documentado)
+
+#### 🤖 Uso de IA, Documentação e Comunidade
+Durante o projeto foram utilizados:
+* IA como auxílio de debug, não geração cega
+* Documentação oficial:
+    * Kubernetes
+    * Docker
+    * Elastic
+* Fóruns e issues reais (timeouts, HPA unknown, Filebeat crashes)
+
+**📌 Todas as decisões foram validadas manualmente no cluster.**
+
+#### 🏁 Estado Final do Projeto
+| Pilar | Status |
+| ----- | ------ |
+| Aplicação | ✅ Estável |
+| Kubernetes | ✅ Funcional |
+| HPA | ✅ Escalando |
+| Métricas | ✅ Prometheus |
+| Logs | ✅ Filebeat |
+| Segurança | ✅ Adequada |
+| Observabilidade | ✅ Funcional |
+| Documentação | ✅ Completa |
+
+### ✔️ Conclusão
+
+Este projeto demonstra capacidade prática de SRE, domínio de troubleshooting, tomada de decisão sob restrições reais e entendimento profundo de infraestrutura moderna.
+
+Nada foi “teórico”.
+Tudo foi **construído, quebrado, analisado e corrigido.**
